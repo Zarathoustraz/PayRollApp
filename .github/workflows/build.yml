@@ -1,0 +1,48 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # allows manually re-running a build from the Actions tab
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller==6.21.0 pytest==9.1.1
+
+      - name: Run test suite
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: pytest tests/ -v
+
+      - name: Build standalone executable with PyInstaller
+        run: >
+          pyinstaller main.py
+          --name CalculateurPaieChantier
+          --onefile
+          --windowed
+          --clean
+          --noconfirm
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CalculateurPaieChantier-windows
+          path: dist/CalculateurPaieChantier.exe
+          if-no-files-found: error
+          retention-days: 30
